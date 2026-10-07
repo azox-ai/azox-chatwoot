@@ -32,6 +32,21 @@ RSpec.describe Avatar::AvatarFromUrlJob do
       expect(avatarable.additional_attributes['last_avatar_sync_at']).to be_present
     end
 
+    it 'normalizes Zalo image/jpg avatar responses to image/jpeg' do
+      jpg_url = 'https://s240-ava-talk.zadn.vn/avatar.jpg'
+      stub_request(:get, jpg_url)
+        .to_return(
+          status: 200,
+          body: File.read(Rails.root.join('spec/assets/avatar.png')),
+          headers: { 'Content-Type' => 'image/jpg' }
+        )
+
+      described_class.perform_now(avatarable, jpg_url)
+      avatarable.reload
+      expect(avatarable.avatar).to be_attached
+      expect(avatarable.avatar.blob.content_type).to eq('image/jpeg')
+    end
+
     it 'attaches webp avatars and updates sync attributes' do
       webp_url = 'https://example.com/avatar.webp'
 

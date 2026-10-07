@@ -11,7 +11,10 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
   include UrlHelper
   queue_as :purgable
 
-  ALLOWED_CONTENT_TYPES = Avatarable::ALLOWED_AVATAR_CONTENT_TYPES
+  # Azox: Zalo's avatar CDN sends the non-standard "image/jpg"; accept it as an alias
+  # and store the canonical "image/jpeg" so Avatarable validation still applies.
+  CONTENT_TYPE_ALIASES = { 'image/jpg' => 'image/jpeg' }.freeze
+  ALLOWED_CONTENT_TYPES = (Avatarable::ALLOWED_AVATAR_CONTENT_TYPES + CONTENT_TYPE_ALIASES.keys).freeze
   MAX_DOWNLOAD_SIZE = 15.megabytes
   RATE_LIMIT_WINDOW = 1.minute
 
@@ -52,7 +55,7 @@ class Avatar::AvatarFromUrlJob < ApplicationJob
     avatarable.avatar.attach(
       io: avatar_file.tempfile,
       filename: avatar_file.original_filename,
-      content_type: avatar_file.content_type
+      content_type: CONTENT_TYPE_ALIASES.fetch(avatar_file.content_type, avatar_file.content_type)
     )
   end
 
